@@ -55,6 +55,47 @@
             align-items: center;
             gap: 1rem;
         }
+        /* Map Zoom & Pan Container */
+        .map-viewport {
+            width: 100%;
+            overflow: hidden;
+            cursor: grab;
+            touch-action: none;
+            position: relative;
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            border: 1px solid var(--line);
+        }
+        .map-viewport:active { cursor: grabbing; }
+        .map-transform {
+            transform-origin: center center;
+            will-change: transform;
+            transition: transform 0.1s ease-out;
+            padding: 40px;
+        }
+        .zoom-controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 100;
+        }
+        .zoom-btn {
+            width: 40px;
+            height: 40px;
+            background: var(--gold);
+            color: var(--cobalt-deep);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
         @media (max-width: 640px) {
             .site-nav { padding: 0.5rem 1rem; }
             .nav-brand { font-size: 1.1rem; }
@@ -195,18 +236,25 @@
                     </div>
                 </div>
 
-                <div id="seatContainer" class="mb-12 overflow-x-auto pb-4">
-                    <div id="vip-section" class="flex flex-col gap-1 mb-4"></div>
-                    <div id="stars-section" class="flex flex-col gap-1 mb-4"></div>
-                    <div id="artists-section" class="flex flex-col gap-1 mb-4"></div>
-                    <div id="row-n-section" class="flex flex-col gap-1 mb-12"></div>
-                    
-                    <div class="w-full border-t border-dashed border-gold/30 relative my-16 text-center">
-                        <span class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#0b032d] px-6 text-2xl italic text-gold">tầng 2 / second floor</span>
+                <div class="map-viewport" id="mapViewport">
+                    <div class="zoom-controls">
+                        <button class="zoom-btn" onclick="zoom(1.2)">+</button>
+                        <button class="zoom-btn" onclick="zoom(0.8)">−</button>
+                        <button class="zoom-btn text-xs" onclick="resetZoom()">FIT</button>
                     </div>
-                    
-                    <div id="floor2-artists" class="flex flex-col gap-1 mb-4"></div>
-                    <div id="floor2-dreamers" class="flex flex-col gap-1"></div>
+                    <div id="seatContainer" class="map-transform" id="mapTransform">
+                        <div id="vip-section" class="flex flex-col gap-1 mb-4"></div>
+                        <div id="stars-section" class="flex flex-col gap-1 mb-4"></div>
+                        <div id="artists-section" class="flex flex-col gap-1 mb-4"></div>
+                        <div id="row-n-section" class="flex flex-col gap-1 mb-12"></div>
+                        
+                        <div class="w-full border-t border-dashed border-gold/30 relative my-16 text-center">
+                            <span class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#0b032d] px-6 text-2xl italic text-gold">tầng 2 / second floor</span>
+                        </div>
+                        
+                        <div id="floor2-artists" class="flex flex-col gap-1 mb-4"></div>
+                        <div id="floor2-dreamers" class="flex flex-col gap-1"></div>
+                    </div>
                 </div>
             </div>
 
@@ -457,6 +505,65 @@
             const l2 = l1.cloneNode(true); rowDiv.appendChild(l2);
             container.appendChild(rowDiv);
         }
+
+        // Map Zoom & Pan Logic
+        let currentScale = 1;
+        let isDragging = false;
+        let startX, startY, translateX = 0, translateY = 0;
+        const viewport = document.getElementById('mapViewport');
+        const transformEl = document.getElementById('seatContainer');
+
+        function updateTransform() {
+            transformEl.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentScale})`;
+        }
+
+        function zoom(factor) {
+            currentScale *= factor;
+            currentScale = Math.min(Math.max(0.5, currentScale), 3);
+            updateTransform();
+        }
+
+        function resetZoom() {
+            currentScale = 1;
+            translateX = 0;
+            translateY = 0;
+            updateTransform();
+        }
+
+        viewport.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.zoom-btn')) return;
+            isDragging = true;
+            startX = e.clientX - translateX;
+            startY = e.clientY - translateY;
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            translateX = e.clientX - startX;
+            translateY = e.clientY - startY;
+            updateTransform();
+        });
+
+        window.addEventListener('mouseup', () => isDragging = false);
+
+        // Touch support for mobile
+        viewport.addEventListener('touchstart', (e) => {
+            if (e.target.closest('.zoom-btn')) return;
+            if (e.touches.length === 1) {
+                isDragging = true;
+                startX = e.touches[0].clientX - translateX;
+                startY = e.touches[0].clientY - translateY;
+            }
+        });
+
+        viewport.addEventListener('touchmove', (e) => {
+            if (!isDragging || e.touches.length !== 1) return;
+            translateX = e.touches[0].clientX - startX;
+            translateY = e.touches[0].clientY - startY;
+            updateTransform();
+        });
+
+        viewport.addEventListener('touchend', () => isDragging = false);
 
         // Initialize Map
         ['A', 'B', 'C'].forEach(r => createSeatRow(r, 12, 24, 12, 12, 'VIP', 'vip-section'));
