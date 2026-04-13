@@ -55,59 +55,20 @@
             align-items: center;
             gap: 1rem;
         }
-        /* Map Zoom & Pan Container */
-        .map-viewport {
-            width: 100%;
-            overflow: hidden;
-            cursor: grab;
-            touch-action: none;
-            position: relative;
-            background: rgba(0,0,0,0.2);
-            border-radius: 12px;
-            border: 1px solid var(--line);
-        }
-        .map-viewport:active { cursor: grabbing; }
-        .map-transform {
-            transform-origin: center center;
-            will-change: transform;
-            transition: transform 0.1s ease-out;
-            padding: 40px;
-        }
-        .zoom-controls {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            z-index: 100;
-        }
-        .zoom-btn {
-            width: 40px;
-            height: 40px;
-            background: var(--gold);
-            color: var(--cobalt-deep);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-            font-weight: bold;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        }
-        
         @media (max-width: 640px) {
             .site-nav { padding: 0.5rem 1rem; }
             .nav-brand { font-size: 1.1rem; }
-            .seat-row { transform: scale(0.8); transform-origin: center; margin-bottom: -4px; }
-            .rowlbl { font-size: 0.8rem; width: 20px; }
-            .aisle { width: 15px; }
-            .panel { border-radius: 16px; padding: 1rem !important; }
-            .hero h1 { font-size: 3rem !important; }
-            .hero p { font-size: 1.2rem !important; }
-            #registerSection .panel { padding: 1.5rem !important; }
+            .rowlbl { font-size: 0.65rem !important; width: 20px !important; flex-shrink: 0; }
+            .aisle { width: 25px !important; display: block !important; flex-shrink: 0; }
+            .seat-row { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 2px !important; justify-content: center !important; width: 100% !important; }
+            .panel { border-radius: 16px; padding: 0.5rem !important; }
+            .hero h1 { font-size: 2.2rem !important; }
+            .hero p { font-size: 0.9rem !important; }
+            #registerSection .panel { padding: 1rem !important; }
             #seatsSection { padding: 1rem 0; }
             .sticky { position: static !important; }
+            .seat { width: 18px !important; height: 18px !important; font-size: 0.6rem !important; flex-shrink: 0; }
+            .map-viewport { transform-origin: top center !important; width: 1000px; position: relative; left: 50%; margin-left: -500px; }
         }
         .pill {
             border: 1px solid var(--line);
@@ -156,6 +117,13 @@
             border: 2px solid var(--gold);
             border-top: none;
         }
+        .map-shell { position: relative; overflow: hidden; touch-action: none; }
+        .map-viewport { transform-origin: 50% 0; will-change: transform; transition: transform 0.15s ease; }
+        .map-controls { position: absolute; right: 12px; top: 12px; z-index: 20; display: flex; flex-direction: column; gap: 6px; }
+        .map-control-btn { width: 38px; height: 38px; border-radius: 999px; border: 1px solid var(--line); background: rgba(11,3,45,.88); color: var(--gold-bright); font-weight: 800; display: grid; place-items: center; }
+        .map-control-btn:active { transform: scale(.96); }
+        .map-zoom-label { position: absolute; left: 12px; top: 12px; z-index: 20; background: rgba(11,3,45,.78); border: 1px solid var(--line); border-radius: 999px; padding: 6px 10px; font-size: 12px; color: var(--gold-bright); }
+        .map-pan-hint { position: absolute; left: 12px; bottom: 12px; z-index: 20; background: rgba(11,3,45,.6); border: 1px solid rgba(247,220,138,.15); border-radius: 12px; padding: 8px 10px; font-size: 11px; color: rgba(251,245,231,.75); max-width: 220px; }
 
         .btn-primary { background: var(--gold); color: var(--cobalt-deep); font-weight: 800; border-radius: 999px; padding: 12px 24px; transition: 0.3s; }
         .btn-primary:hover { background: var(--gold-bright); transform: translateY(-2px); }
@@ -236,13 +204,15 @@
                     </div>
                 </div>
 
-                <div class="map-viewport" id="mapViewport">
-                    <div class="zoom-controls">
-                        <button class="zoom-btn" onclick="zoom(1.2)">+</button>
-                        <button class="zoom-btn" onclick="zoom(0.8)">−</button>
-                        <button class="zoom-btn text-xs" onclick="resetZoom()">FIT</button>
+                <div id="seatContainer" class="map-shell mb-12 pb-4 panel p-4 md:p-6">
+                    <div class="map-controls">
+                        <button class="map-control-btn" id="zoomOutBtn" type="button">−</button>
+                        <button class="map-control-btn" id="zoomInBtn" type="button">+</button>
+                        <button class="map-control-btn" id="zoomResetBtn" type="button">⌂</button>
                     </div>
-                    <div id="seatContainer" class="map-transform" id="mapTransform">
+                    <div class="map-zoom-label" id="zoomLabel">100%</div>
+                    <div class="map-pan-hint" data-i18n="panHint">Pinch or use buttons to zoom. Drag to move the map.</div>
+                    <div class="map-viewport" id="mapViewport">
                         <div id="vip-section" class="flex flex-col gap-1 mb-4"></div>
                         <div id="stars-section" class="flex flex-col gap-1 mb-4"></div>
                         <div id="artists-section" class="flex flex-col gap-1 mb-4"></div>
@@ -264,11 +234,11 @@
                     <h3 class="text-xl font-bold mb-4 border-b border-gold/20 pb-2 text-gold" data-i18n="summaryTitle">Summary</h3>
                     
                     <div class="map-legend mb-6">
-                        <div class="legend-item"><div class="legend-box vip-bg opacity-30"></div> VIP (Not Selectable)</div>
-                        <div class="legend-item"><div class="legend-box stars-bg"></div> The Stars</div>
-                        <div class="legend-item"><div class="legend-box artists-bg"></div> The Artists</div>
-                        <div class="legend-item"><div class="legend-box dreamers-bg"></div> The Dreamers</div>
-                        <div class="legend-item"><div class="legend-box bg-white"></div> Selected</div>
+                        <div class="legend-item"><div class="legend-box vip-bg opacity-30"></div> <span data-i18n="vipLegend">VIP (Not Selectable)</span></div>
+                        <div class="legend-item"><div class="legend-box stars-bg"></div> <span data-i18n="starsLegend">The Stars</span></div>
+                        <div class="legend-item"><div class="legend-box artists-bg"></div> <span data-i18n="artistsLegend">The Artists</span></div>
+                        <div class="legend-item"><div class="legend-box dreamers-bg"></div> <span data-i18n="dreamersLegend">The Dreamers</span></div>
+                        <div class="legend-item"><div class="legend-box bg-white"></div> <span data-i18n="selectedLegend">Selected</span></div>
                     </div>
 
                     <div id="selection-list" class="space-y-2 mb-6 max-h-60 overflow-y-auto text-sm">
@@ -350,8 +320,8 @@
     <script>
         const translations = {
             en: {
-                heroTitle: "MAMMA MIA!",
-                heroSubtitle: "Why waste a good wedding?",
+                heroTitle: "RMIT Hanoi Musical Theatre Club",
+                heroSubtitle: "",
                 aboutTitle: "About Us",
                 viewSeats: "View Seatmap",
                 registerNow: "Register Now",
@@ -364,6 +334,15 @@
                 seatTypeTitle: "Seat Type",
                 selSeatTitle: "Selected Seat",
                 formName: "Full Name",
+                panHint: "Pinch or use buttons to zoom. Drag to move the map.",
+                vipLegend: "VIP (Not Selectable)",
+                starsLegend: "The Stars",
+                artistsLegend: "The Artists",
+                dreamersLegend: "The Dreamers",
+                selectedLegend: "Selected",
+                seatTypeTitle: "Seat Type",
+                selSeatTitle: "Selected Seat",
+                regSelectedTitle: "Selected Seat",
                 formEmail: "Email Address",
                 formPhone: "Phone Number",
                 formSid: "sID (RMIT Student/Staff ID)",
@@ -375,8 +354,8 @@
                 refLabel: "Referral Code (Optional)"
             },
             vi: {
-                heroTitle: "MAMMA MIA!",
-                heroSubtitle: "Cần gì phải phí một đám cưới tuyệt vời?",
+                heroTitle: "Câu lạc bộ Nhạc kịch RMIT Hà Nội",
+                heroSubtitle: "",
                 aboutTitle: "Giới thiệu Ban tổ chức",
                 viewSeats: "Xem sơ đồ ghế",
                 registerNow: "Đăng ký ngay",
@@ -389,6 +368,12 @@
                 seatTypeTitle: "Loại ghế",
                 selSeatTitle: "Ghế đã chọn",
                 formName: "Họ và tên",
+                panHint: "Chụm hoặc dùng nút để phóng to. Kéo để di chuyển sơ đồ.",
+                vipLegend: "VIP (Không thể chọn)",
+                starsLegend: "The Stars",
+                artistsLegend: "The Artists",
+                dreamersLegend: "The Dreamers",
+                selectedLegend: "Đã chọn",
                 formEmail: "Địa chỉ Email",
                 formPhone: "Số điện thoại",
                 formSid: "sID (Mã sinh viên/nhân viên RMIT)",
@@ -428,11 +413,11 @@
             window.scrollTo(0, 0);
 
             if (id === 'register') {
-                document.getElementById('regSummary').innerHTML = selectedSeats.map(s => `${s.row}${s.num}`).join(', ');
+                document.getElementById('regSummary').innerHTML = selectedSeats.length ? selectedSeats.map(s => `<div class="flex justify-between items-center border-b border-white/10 py-2"><span>${s.row}${s.num}</span><span class="text-[10px] uppercase opacity-70">${s.type}</span></div>`).join('') : '<div class="text-white/40">No seats selected</div>';
             }
             if (id === 'confirmation') {
                 document.getElementById('confName').textContent = document.getElementById('regName').value || 'Guest';
-                document.getElementById('confSeats').textContent = selectedSeats.map(s => `${s.row}${s.num}`).join(', ');
+                document.getElementById('confSeats').textContent = selectedSeats.map(s => `${s.row}${s.num}`).join(', ') || '-';
             }
         }
 
@@ -506,65 +491,6 @@
             container.appendChild(rowDiv);
         }
 
-        // Map Zoom & Pan Logic
-        let currentScale = 1;
-        let isDragging = false;
-        let startX, startY, translateX = 0, translateY = 0;
-        const viewport = document.getElementById('mapViewport');
-        const transformEl = document.getElementById('seatContainer');
-
-        function updateTransform() {
-            transformEl.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentScale})`;
-        }
-
-        function zoom(factor) {
-            currentScale *= factor;
-            currentScale = Math.min(Math.max(0.5, currentScale), 3);
-            updateTransform();
-        }
-
-        function resetZoom() {
-            currentScale = 1;
-            translateX = 0;
-            translateY = 0;
-            updateTransform();
-        }
-
-        viewport.addEventListener('mousedown', (e) => {
-            if (e.target.closest('.zoom-btn')) return;
-            isDragging = true;
-            startX = e.clientX - translateX;
-            startY = e.clientY - translateY;
-        });
-
-        window.addEventListener('mousemove', (e) => {
-            if (!isDragging) return;
-            translateX = e.clientX - startX;
-            translateY = e.clientY - startY;
-            updateTransform();
-        });
-
-        window.addEventListener('mouseup', () => isDragging = false);
-
-        // Touch support for mobile
-        viewport.addEventListener('touchstart', (e) => {
-            if (e.target.closest('.zoom-btn')) return;
-            if (e.touches.length === 1) {
-                isDragging = true;
-                startX = e.touches[0].clientX - translateX;
-                startY = e.touches[0].clientY - translateY;
-            }
-        });
-
-        viewport.addEventListener('touchmove', (e) => {
-            if (!isDragging || e.touches.length !== 1) return;
-            translateX = e.touches[0].clientX - startX;
-            translateY = e.touches[0].clientY - startY;
-            updateTransform();
-        });
-
-        viewport.addEventListener('touchend', () => isDragging = false);
-
         // Initialize Map
         ['A', 'B', 'C'].forEach(r => createSeatRow(r, 12, 24, 12, 12, 'VIP', 'vip-section'));
         ['D', 'E', 'F', 'G', 'H', 'J'].forEach(r => createSeatRow(r, 13, 26, 13, 13, 'Stars', 'stars-section'));
@@ -592,6 +518,90 @@
         eRow.appendChild(ec); eRow.appendChild(el.cloneNode(true));
         document.getElementById('floor2-dreamers').appendChild(eRow);
 
+        // Zoom and pan controls
+        let isMobile = window.innerWidth < 640;
+        let zoom = isMobile ? 0.35 : 1;
+        let panX = 0;
+        let panY = 0;
+        let isDragging = false;
+        let startX = 0;
+        let startY = 0;
+        const mapViewport = document.getElementById('mapViewport');
+        const zoomLabel = document.getElementById('zoomLabel');
+
+        function applyTransform() {
+            mapViewport.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+            zoomLabel.textContent = Math.round(zoom * 100) + '%';
+        }
+        function clampPan() {
+            // Remove heavy clamping on mobile to allow viewing whole map
+            if (!isMobile) {
+                const max = 300 * (zoom - 1);
+                panX = Math.max(-max, Math.min(max, panX));
+                panY = Math.max(-max, Math.min(max, panY));
+            }
+        }
+        function setZoom(newZoom, centerX = 0, centerY = 0) {
+            const oldZoom = zoom;
+            zoom = Math.max(0.3, Math.min(2.5, newZoom));
+            const ratio = zoom / oldZoom;
+            panX = centerX - ratio * (centerX - panX);
+            panY = centerY - ratio * (centerY - panY);
+            applyTransform();
+        }
+        document.getElementById('zoomInBtn').onclick = () => setZoom(zoom + 0.2);
+        document.getElementById('zoomOutBtn').onclick = () => setZoom(zoom - 0.2);
+        document.getElementById('zoomResetBtn').onclick = () => { zoom = 1; panX = 0; panY = 0; applyTransform(); };
+
+        mapViewport.parentElement.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const dir = e.deltaY > 0 ? -0.15 : 0.15;
+            setZoom(zoom + dir, e.offsetX - mapViewport.parentElement.clientWidth / 2, e.offsetY - mapViewport.parentElement.clientHeight / 2);
+        }, { passive: false });
+
+        mapViewport.parentElement.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            startX = e.clientX - panX;
+            startY = e.clientY - panY;
+        });
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            panX = e.clientX - startX;
+            panY = e.clientY - startY;
+            clampPan();
+            applyTransform();
+        });
+        window.addEventListener('mouseup', () => isDragging = false);
+
+        mapViewport.parentElement.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                mapViewport.parentElement.dataset.pinching = Math.sqrt(dx*dx + dy*dy);
+            } else if (e.touches.length === 1) {
+                isDragging = true;
+                startX = e.touches[0].clientX - panX;
+                startY = e.touches[0].clientY - panY;
+            }
+        }, { passive: true });
+        mapViewport.parentElement.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2) {
+                e.preventDefault();
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                const startDist = parseFloat(mapViewport.parentElement.dataset.pinching || dist);
+                setZoom(zoom * (dist / startDist));
+            } else if (isDragging && e.touches.length === 1) {
+                panX = e.touches[0].clientX - startX;
+                panY = e.touches[0].clientY - startY;
+                clampPan();
+                applyTransform();
+            }
+        }, { passive: false });
+        mapViewport.parentElement.addEventListener('touchend', () => { isDragging = false; mapViewport.parentElement.dataset.pinching = ''; });
+
+        applyTransform();
         setLang('en');
     </script>
 </body>
