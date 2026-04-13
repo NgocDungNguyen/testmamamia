@@ -305,9 +305,9 @@
             
             <div class="bg-white/5 rounded-2xl p-8 border border-white/10 text-left mb-8">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                    <div><h4 class="text-[10px] uppercase text-gold tracking-widest mb-1">Event</h4><p class="font-bold">Mamma Mia!</p></div>
-                    <div><h4 class="text-[10px] uppercase text-gold tracking-widest mb-1">Date & Time</h4><p class="font-bold">31 May 2025, 8:00 PM</p></div>
-                    <div><h4 class="text-[10px] uppercase text-gold tracking-widest mb-1">Venue</h4><p class="font-bold">Nhà hát Chèo Việt Nam</p></div>
+                    <div><h4 class="text-[10px] uppercase text-gold tracking-widest mb-1">DATE</h4><p class="font-bold">30 MAY 2026</p></div>
+                    <div><h4 class="text-[10px] uppercase text-gold tracking-widest mb-1">TIME</h4><p class="font-bold">8PM - 9:30PM</p><p class="text-cream/60 text-sm mt-1">(check-in starts at 7PM)</p></div>
+                    <div><h4 class="text-[10px] uppercase text-gold tracking-widest mb-1">VENUE</h4><p class="font-bold">Nhà văn hoá Quận Đống Đa</p><p class="text-cream/60 text-sm mt-1">22 Đặng Tiến Đông, Hà Nội</p></div>
                     <div><h4 class="text-[10px] uppercase text-gold tracking-widest mb-1">Seats</h4><p id="confSeats" class="font-bold">-</p></div>
                     <div><h4 class="text-[10px] uppercase text-gold tracking-widest mb-1">Name</h4><p id="confName" class="font-bold">-</p></div>
                 </div>
@@ -521,6 +521,7 @@
         // Zoom and pan controls
         let isMobile = window.innerWidth < 640;
         let zoom = isMobile ? 0.35 : 1;
+        let desktopInitialApplied = false;
         let panX = 0;
         let panY = 0;
         let isDragging = false;
@@ -532,6 +533,18 @@
         function applyTransform() {
             mapViewport.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
             zoomLabel.textContent = Math.round(zoom * 100) + '%';
+        }
+        function fitDesktopMap() {
+            if (isMobile || desktopInitialApplied) return;
+            desktopInitialApplied = true;
+            const shell = mapViewport.parentElement;
+            const baseWidth = mapViewport.scrollWidth;
+            const visibleWidth = shell.clientWidth;
+            const fitZoom = Math.min(1, (visibleWidth - 24) / baseWidth);
+            zoom = fitZoom;
+            panX = 0;
+            panY = 0;
+            applyTransform();
         }
         function clampPan() {
             // Remove heavy clamping on mobile to allow viewing whole map
@@ -602,6 +615,7 @@
         mapViewport.parentElement.addEventListener('touchend', () => { isDragging = false; mapViewport.parentElement.dataset.pinching = ''; });
 
         applyTransform();
+        requestAnimationFrame(fitDesktopMap);
         setLang('en');
     </script>
 </body>
